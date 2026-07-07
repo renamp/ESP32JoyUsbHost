@@ -2,6 +2,7 @@ idf_component_register(
     SRCS 
         "src/main.c"
         "src/usb_crc.S"
+        "src/usb_data_encoding.S"
     INCLUDE_DIRS 
         "."
         "inc/"
