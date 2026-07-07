@@ -1,6 +1,4 @@
-#include <stdio.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include "main.h"
 
 void taskUsb(void *pvParameters);
 
