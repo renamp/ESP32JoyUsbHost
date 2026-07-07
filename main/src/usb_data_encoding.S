@@ -15,11 +15,18 @@
 
 
 .global Bytes2Rawdiff
+.global Rawdiff2Bytes
 
-.equ  SYNC_BITS,            0x66A6
-.equ  BITSTUFF_CNT_INIT,    0x05
-.equ  BITSTUFF_CNT_RST,     0x07
-.equ  STACK_FRAME_SIZE,     16
+.equ  SYNC_BITS,                0x66A6
+.equ  BITSTUFF_CNT_INIT,        0x05
+.equ  BITSTUFF_CNT_RST,         0x07
+.equ  STACK_FRAME_SIZE,         16
+
+.equ BITSTUFF_CNT_RST,          0x06
+.equ INITIAL_DIFF,              0x02
+.equ DIFF_MASK,                 0x03
+.equ SET_BIT,                   0x80
+.equ NUMBER_DIFF_BITS_IN_BYTE,  4
 
 .text
 
@@ -99,4 +106,65 @@ StoreByte:
     addi    sp, sp, -STACK_FRAME_SIZE   # Alloc one more stack frame
 StoreByteNoOverflow:
     sb      t5, 0(a7)       # store diff byte
+    ret
+
+
+/**
+ * @brief  Converts an array of raw differential bits to data bytes.
+ * @param  a0: Length of the input raw differential data in bits
+ * @param  a1: Pointer to the raw differential data array(stored reverse)
+ * @param  a2: Pointer to the data array to store output bytes
+ * @retval a0: Length of the output data in bytes
+ * @note
+ *
+ */
+Rawdiff2Bytes:
+    mv      a7, x0              # clear data bytes counter
+    mv      t6, x0              # clear (T)[t6] skip bitstuff
+    mv      t5, x0              # clear Decoding data byte
+    li      a6, 0x08            # [a6] count data_bits
+    li      a4, NUMBER_DIFF_BITS_IN_BYTE   # [a4] load counter diff bits in byte
+    li      t3, BITSTUFF_CNT_RST           # [t3] reset bitstuff counter
+    li      t4, INITIAL_DIFF               # [t4] load Initial diff state
+Rawdiff2BytesI0:
+    lbu     t2, 0(a1)           # load to [t2] next packed bitstuff from array
+    addi    a1, a1, -1          # update point to next element (dec)
+Rawdiff2BytesI1:
+    andi    t0, t2, DIFF_MASK   # next diff (D- and D+) masked to decode
+    xor     t1, t4, t0          # check state of bits. if didnt change result==0
+    mv      t4, t0              # store actual state for next check
+    bnez    t1, Rawdiff2BytesL1 # branch if state changed
+    srli    t5, t5, 1
+    addi    t3, t3, -1          # decrement bitstuff counter [t3]
+    bnez    t3, Rawdiff2BytesL2 # branch if not bitstuff
+    li      t6, 1               # set (T)[t6] skip next bit. it is a bitstuffed
+    li      t3, BITSTUFF_CNT_RST
+Rawdiff2BytesL2:
+    or      t5, t5, SET_BIT     # update current decoding data byte
+    j      Rawdiff2BytesL3
+Rawdiff2BytesS1:
+    mv      t6, x0              # clear (T)[t6] skip bitstuff
+    j      Rawdiff2BytesL4
+Rawdiff2BytesL1:
+    bnez    t6, Rawdiff2BytesS1 # it is bitstuff - goto skip bitstuff
+    srli    t5, t5, 1           # update current decoding data byte
+    li      t3, BITSTUFF_CNT_RST
+Rawdiff2BytesL3:                # check number of bits
+    addi   a6, a6, -1           # [a6] decrement data_bits counter
+    bnez    a6, Rawdiff2BytesL4 # branch when counter==0
+    li      a6, 0x08            # reset data_bits counter [a6]
+    sb      t5, 0(a2)           # store decoded data
+    addi    a2, a2, 1           # Increment data pointer
+    addi    a7, a7, 1           # incremment decoded data counter [a7]
+    mv      t5, x0              # clear Decoding data byte
+Rawdiff2BytesL4:                # check diff len
+    add     a0, a0, -1          # decrement len diff bits
+    beqz    a0, Rawdiff2BytesEND
+    srli    t2, t2, 2           # rotate to next differential (D- and D+)
+    addi    a4, a4, -1          # decrement diff bits in byte counter
+    bnez    a4, Rawdiff2BytesI1
+    li      a4, NUMBER_DIFF_BITS_IN_BYTE
+    j       Rawdiff2BytesI0
+Rawdiff2BytesEND:
+    mv   a0, a7          # return len of decoded data bytes
     ret
