@@ -11,10 +11,13 @@
   */
 
 .global USB_crc16
+.global USB_AppendCRC5
 
 
 .equ CRC16_INI,         0xFFFF
 .equ CRC16_POLY,        0xA001
+.equ CRC5_POLY,         0x14        ; poly = 10100
+.equ CRC5_INIMASK,      0x1F
 
 .text
 /**
@@ -56,4 +59,44 @@ usb_crc16_no_poly:
     bnez    a0, usb_crc16_l1
     li      a0, 0xFFFF
     sub     a0, a0, a2          # Final invert (One complement)
+    ret
+
+
+/**
+ * @brief  Calculate and Append CRC-5 to USB token
+ *
+ * @param  a0: pointer to USBToken struct type
+ * @retval  CRC-5
+ * @note
+ *    prototype:
+ *      extern void USB_AppendCRC5(USBToken *data);
+ * USBToken {[0:8]pid, [0:6]Addr|[7:10]endpont|[11:15]CRC}
+ */
+USB_AppendCRC5:
+    lw      a1, 0(a0)            # Read token
+    srli    a1, a1, 8           # Rotate to exclude first byte (pid)
+    li      t0, CRC5_INIMASK    # init = 11111
+    li      t1, 11
+crc5_01:
+    xor     t2, t0, a1
+    srli    a1, a1, 1
+    srli    t0, t0, 1
+    andi    t6, t2, 1
+    srli    t2, t2, 1
+    beqz    t6, crc5_02
+    li      t2, CRC5_POLY
+    xor     t0, t0, t2		    # xor with poly
+crc5_02:
+    addi    t1, t1, -1          # decrement
+    bnez    t1, crc5_01
+    li      t2, 0xff
+    and     t0, t0, t2
+    sub     t2, t2, t0          # One complement
+    andi    a1, t2, CRC5_INIMASK
+    slli    t0, a1, 3           # Shift returned crc5
+    andi    t0, t0, 0xF8        # CRC5 last 5 bits
+    lbu     t1, 2(a0)
+    andi    t1, t1, 0x7         # First 3 bits are from endpoint
+    or      t1, t1, t0
+    sb      t1, 2(a0)           # Append CRC5 to Token array
     ret
