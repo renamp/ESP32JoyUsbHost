@@ -30,7 +30,6 @@
  *    prototype:
  *      extern uint16_t USB_crc16(uint16_t len, uint8_t *ptr_data);
  */
-.balign 4
 USB_crc16:
     addi    a1, a1, 1           # skip pid byte (first)
     addi    a0, a0, -1          # dec length

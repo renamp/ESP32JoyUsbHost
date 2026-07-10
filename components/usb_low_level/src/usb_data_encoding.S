@@ -13,6 +13,7 @@
   ******************************************************************************
   */
 
+#include "usb_conf.h"
 
 .global Bytes2Rawdiff
 .global Rawdiff2Bytes
@@ -20,13 +21,11 @@
 .equ  SYNC_BITS,                0x66A6
 .equ  BITSTUFF_CNT_INIT,        0x05
 .equ  BITSTUFF_CNT_RST,         0x07
-.equ  STACK_FRAME_SIZE,         16
 
 .equ BITSTUFF_CNT_RST,          0x06
 .equ INITIAL_DIFF,              0x02
 .equ DIFF_MASK,                 0x03
 .equ SET_BIT,                   0x80
-.equ NUMBER_DIFF_BITS_IN_BYTE,  4
 
 .text
 
