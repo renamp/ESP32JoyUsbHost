@@ -33,6 +33,7 @@
 /* USB core handling definitions ---------------------------------------------*/
 #define NUMBER_DIFF_BITS_IN_BYTE  0x04
 #define STACK_FRAME_SIZE          16
+#define USB_TOKEN_PID_IN          0x69
 
 
 /*----------------------------------------------------------------------------*/

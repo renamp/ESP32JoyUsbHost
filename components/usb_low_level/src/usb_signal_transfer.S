@@ -17,6 +17,8 @@
 #include "usb_conf.h"
 
 .global Send_RawDiff
+.global USB_SendBytes
+.global USB_SendTokenPacket
 
 /**
  * @brief  Send Raw differential data bits
@@ -100,4 +102,75 @@ Send_RawDiff_End:
     mv    a0, x0
     mv    a1, x0
     mv    ra, a7
+    ret
+
+
+/**
+ * @brief  Send bytes arrary to device
+ *
+ * @param  a0: Length of bytes array
+ * @param  a1: Pointer to bytes array
+ * @retval void
+ * @note
+ *      prototype:
+ *          extern void USB_SendBytes(uint8_t size, uint8_t *data);
+ */
+.section .iram1.text
+USB_SendBytes:
+    addi    sp, sp, -STACK_FRAME_SIZE
+    sw      s0, STACK_FRAME_SIZE-4(sp)
+    addi    s0, sp, STACK_FRAME_SIZE
+    sw      ra, -8(s0)
+    sw      a0, -12(s0)
+    sw      a1, -16(s0)
+
+    call    USB_crc16
+    lw      a2, -12(s0)
+    lw      a3, -16(s0)
+    add     a3, a3, a2
+    sb      a0, 0(a3)
+    srli    a0, a0, 8
+    sb      a0, 1(a3)           # Append CRC
+    addi    a0, a2, 2
+    lw      a1, -16(s0)
+    la      a2, Send_RawDiff
+    la      t0, Bytes2Rawdiff
+    jalr    t0
+
+    lw      ra, -8(s0)
+    lw      s0, STACK_FRAME_SIZE-4(sp)
+    addi    sp, sp, STACK_FRAME_SIZE
+    ret
+
+
+/**
+ * @brief  Send Token Packet
+ *
+ * @param  a0: PID type
+ * @param  a1: Pointer to Token array
+ * @retval void
+ * @note
+ *      prototype:
+ *          extern void USB_SendTokenPacket(uint8_t pid, USBToken *data);
+ */
+.section .iram1.text
+USB_SendTokenPacket:
+    addi    sp, sp, -STACK_FRAME_SIZE
+    sb      a0, 0(a1)
+    sw      ra, 0(sp)           # store return address
+	sw      a0, 4(sp)           # store pid to enabled or disabled interrupt
+    li      a0, 0x03            # size of token packet
+    la      a2, Send_RawDiff
+    call    Bytes2Rawdiff
+    lw      a3, 4(sp)           # load pid
+    li      t0, USB_TOKEN_PID_IN
+    beq   a3, t0, SendTokenPacket_end
+    csrrs   x0, mstatus, 8      # enable interrupt if not a PID IN
+    lw      ra, 0(sp)
+    addi    sp, sp, STACK_FRAME_SIZE
+    ret
+SendTokenPacket_end:
+    csrrc   t0, mstatus, 8      # Disable interrupt
+	lw      ra, 0(sp)
+    addi    sp, sp, STACK_FRAME_SIZE
     ret
