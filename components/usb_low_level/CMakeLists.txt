@@ -3,6 +3,7 @@ idf_component_register(
         "src/usb_crc.S"
         "src/usb_data_encoding.S"
         "src/usb_signal_transfer.S"
+        "src/usb_signal_receive.S"
         "src/usb_util.S"
     INCLUDE_DIRS 
         "inc/"

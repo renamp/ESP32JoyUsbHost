@@ -23,7 +23,7 @@
 
 /*----------------------------------------------------------------------------*/
 /* Debug pin to assist on timing analyses ------------------------------------*/
-#define USB_DEBUG_PIN           8
+//#define USB_DEBUG_PIN           8
 
 /* Insert brake point to sync and eop erro procedures ------------------------*/
 //#define USB_DEBUG_SYNC_EOP_ERROR
@@ -34,6 +34,11 @@
 #define NUMBER_DIFF_BITS_IN_BYTE  0x04
 #define STACK_FRAME_SIZE          16
 #define USB_TOKEN_PID_IN          0x69
+#define USB_SYNC_TIMEOUT          0x100
+#define DIFF_IC_MASK              0xC0        // Incoming encoded diff mask
+#define USB_DIFF_ACK_PACKET       0x66A665A9  // rev(0xA965A666)
+#define USB_DIFF_ACK_PACKET_LEN   16
+#define INI_L_ENC_DIFF            0x80        // Initial value for last enc.diff
 
 
 /*----------------------------------------------------------------------------*/
@@ -82,8 +87,6 @@
 
 #if defined(USB_DEBUG_PIN)
   #define USB_DBG_MSK       (1 << USB_DEBUG_PIN)
-#else
-  #define USB_DBG_MSK       1 << 31
 #endif
 
 #endif /* __USB_CONF_H */
